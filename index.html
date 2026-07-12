@@ -398,6 +398,8 @@
 
     .note-input {
       font-size: 18px;
+      line-height: 1.35;
+      overflow: auto;
     }
   }
 </style>
@@ -407,7 +409,8 @@
     { id: "4A", kind: "four" },
     { id: "4B", kind: "four" },
     { id: "3A", kind: "three" },
-    { id: "3B", kind: "three" }
+    { id: "3B", kind: "three" },
+    { id: "3C", kind: "three" }
   ];
 
   const progressOptions = {
@@ -531,7 +534,7 @@
     board.innerHTML = "";
     const visibleSections = state.sections.filter((section) => section.selected && section.visible);
     const startY = 100;
-    const noteAreaH = isCompactViewport() ? 72 : 132;
+    const noteAreaH = isCompactViewport() ? 104 : 132;
     const gapBeforeNote = 18;
     const sectionHeights = visibleSections.map(getSectionHeight);
     const sectionsHeight = sectionHeights.reduce((total, height) => total + height, 0);
