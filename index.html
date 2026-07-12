@@ -769,7 +769,8 @@
     const bottom = y + h - 44;
     const cellW = (right - left) / cols;
     const cellH = Math.max(96, (bottom - top) / rows);
-    const size = Math.max(34, Math.min(72, cellW * 0.18, cellH * 0.22));
+    const sizeScale = isCompactViewport() ? 1.22 : 1;
+    const size = Math.max(34, Math.min(86, cellW * 0.18 * sizeScale, cellH * 0.22 * sizeScale));
     const positions = [];
 
     for (let i = 0; i < count; i += 1) {
@@ -808,10 +809,11 @@
         "stroke-width": 4
       }));
       board.append(group);
-      drawSeat(section, table, 0, cx + size / 2 + 22, cy - size / 2 - 22);
-      drawSeat(section, table, 1, cx + size / 2 + 22, cy + size / 2 + 22);
-      drawSeat(section, table, 2, cx - size / 2 - 22, cy + size / 2 + 22);
-      drawSeat(section, table, 3, cx - size / 2 - 22, cy - size / 2 - 22);
+      const seatGap = isCompactViewport() ? 17 : 22;
+      drawSeat(section, table, 0, cx + size / 2 + seatGap, cy - size / 2 - seatGap);
+      drawSeat(section, table, 1, cx + size / 2 + seatGap, cy + size / 2 + seatGap);
+      drawSeat(section, table, 2, cx - size / 2 - seatGap, cy + size / 2 + seatGap);
+      drawSeat(section, table, 3, cx - size / 2 - seatGap, cy - size / 2 - seatGap);
     } else {
       const height = size * 1.8;
       const points = [
@@ -826,9 +828,10 @@
         "stroke-width": 4
       }));
       board.append(group);
-      drawSeat(section, table, 0, cx + size / 2 + 22, cy - 8);
-      drawSeat(section, table, 1, cx, cy + height / 2 + 28);
-      drawSeat(section, table, 2, cx - size / 2 - 22, cy - 8);
+      const seatGap = isCompactViewport() ? 17 : 22;
+      drawSeat(section, table, 0, cx + size / 2 + seatGap, cy - 6);
+      drawSeat(section, table, 1, cx, cy + height / 2 + (isCompactViewport() ? 22 : 28));
+      drawSeat(section, table, 2, cx - size / 2 - seatGap, cy - 6);
     }
 
     if (table.progress !== "None") {
@@ -843,15 +846,6 @@
         "pointer-events": "none"
       }, table.progress));
     }
-
-    board.append(svgEl("text", {
-      x: cx,
-      y: cy + size + 56,
-      "text-anchor": "middle",
-      fill: "#686b70",
-      "font-size": 17,
-      "font-family": "Yu Gothic, Meiryo, sans-serif"
-    }, `卓${tableIndex + 1}`));
 
   }
 
@@ -948,12 +942,21 @@
       y: cy + 9,
       "text-anchor": "middle",
       fill: "#202124",
-      "font-size": table.seats[seatIndex] === "〇" ? 25 : 21,
+      "font-size": getSeatFontSize(table.seats[seatIndex]),
       "font-family": "Yu Gothic, Meiryo, sans-serif",
       "font-weight": 600,
       "pointer-events": "none"
     }, table.seats[seatIndex]));
     board.append(group);
+  }
+
+  function isCompactViewport() {
+    return window.matchMedia("(max-width: 860px)").matches;
+  }
+
+  function getSeatFontSize(value) {
+    const base = value === "〇" ? 25 : 21;
+    return isCompactViewport() ? base + 5 : base;
   }
 
   function buildExportSvg() {
