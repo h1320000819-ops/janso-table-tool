@@ -1,0 +1,1003 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>雀荘 卓情報 画像作成</title>
+</head>
+<body>
+<div id="app">
+  <header class="topbar">
+    <div>
+      <p class="eyebrow">雀荘 卓情報 画像作成</p>
+      <h1>卓情報ボード</h1>
+    </div>
+    <div class="top-actions">
+      <button id="backBtn" type="button">戻る</button>
+      <button id="downloadBtn" class="primary" type="button">PNG保存</button>
+      <button id="previewBtn" type="button">プレビュー</button>
+      <button id="resetBtn" type="button">リセット</button>
+    </div>
+  </header>
+
+  <main id="startScreen" class="start-screen">
+    <section class="start-card" aria-label="領域選択">
+      <p class="eyebrow">最初に使う領域を選択</p>
+      <h2>作成する卓の種類を選んでください</h2>
+      <div id="areaPicker" class="area-picker"></div>
+      <button id="startBtn" class="primary start-button" type="button">卓作成画面へ</button>
+      <p id="startError" class="error" aria-live="polite"></p>
+    </section>
+  </main>
+
+  <main id="workScreen" class="work-screen is-hidden">
+    <section class="preview-wrap" aria-label="プレビュー">
+      <svg id="board" viewBox="0 0 900 1120" role="img" aria-label="卓情報画像"></svg>
+    </section>
+  </main>
+</div>
+
+<div id="previewModal" class="preview-modal is-hidden" aria-label="保存画像プレビュー">
+  <div class="preview-dialog">
+    <button id="closePreviewBtn" class="preview-close" type="button" aria-label="プレビューを閉じる">×</button>
+    <div id="previewImageWrap" class="preview-image-wrap"></div>
+  </div>
+</div>
+
+<style>
+  :root {
+    color-scheme: light;
+    --bg: #f6f5f1;
+    --panel: #ffffff;
+    --ink: #202124;
+    --muted: #686b70;
+    --line: #d8d5cd;
+    --accent: #246b60;
+    --accent-ink: #ffffff;
+    --soft: #e8f0ed;
+    --danger: #a13f36;
+    font-family: "Yu Gothic", "Meiryo", system-ui, sans-serif;
+  }
+
+  * {
+    box-sizing: border-box;
+  }
+
+  body {
+    margin: 0;
+    background: var(--bg);
+    color: var(--ink);
+  }
+
+  #app {
+    min-height: 100vh;
+    padding: 18px;
+  }
+
+  .topbar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+    max-width: 1220px;
+    margin: 0 auto 16px;
+  }
+
+  .top-actions {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+  }
+
+  .eyebrow {
+    margin: 0 0 4px;
+    color: var(--muted);
+    font-size: 13px;
+  }
+
+  h1,
+  h2 {
+    margin: 0;
+    font-weight: 600;
+  }
+
+  h1 {
+    font-size: 26px;
+  }
+
+  h2 {
+    font-size: 22px;
+  }
+
+  .is-hidden {
+    display: none !important;
+  }
+
+  .start-screen {
+    max-width: 720px;
+    margin: 0 auto;
+  }
+
+  .start-card,
+  .preview-wrap {
+    background: var(--panel);
+    border: 1px solid var(--line);
+    border-radius: 8px;
+  }
+
+  .start-card {
+    padding: 20px;
+  }
+
+  .area-picker {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(112px, 1fr));
+    gap: 10px;
+    margin: 18px 0;
+  }
+
+  .area-choice {
+    display: grid;
+    gap: 8px;
+    border: 1px solid var(--line);
+    border-radius: 8px;
+    padding: 12px;
+    cursor: pointer;
+    background: #fff;
+  }
+
+  .area-choice:has(input:checked) {
+    border-color: var(--accent);
+    background: var(--soft);
+  }
+
+  .area-choice input {
+    width: 18px;
+    min-height: 18px;
+  }
+
+  .area-name {
+    font-size: 24px;
+    font-weight: 600;
+  }
+
+  .area-kind {
+    color: var(--muted);
+    font-size: 13px;
+  }
+
+  .start-button {
+    width: 100%;
+    min-height: 42px;
+  }
+
+  .error {
+    min-height: 20px;
+    margin: 10px 0 0;
+    color: var(--danger);
+    font-size: 13px;
+  }
+
+  .work-screen {
+    max-width: 1220px;
+    margin: 0 auto;
+  }
+
+  button {
+    min-height: 36px;
+    border: 1px solid var(--line);
+    border-radius: 6px;
+    background: #fff;
+    color: var(--ink);
+    padding: 7px 10px;
+    font: inherit;
+    cursor: pointer;
+  }
+
+  button:hover {
+    background: var(--soft);
+  }
+
+  .primary {
+    border-color: var(--accent);
+    background: var(--accent);
+    color: var(--accent-ink);
+  }
+
+  .primary:hover {
+    background: #1d5a51;
+  }
+
+  .preview-wrap {
+    padding: 12px;
+  }
+
+  .preview-modal {
+    position: fixed;
+    inset: 0;
+    z-index: 20;
+    display: grid;
+    place-items: center;
+    padding: 24px;
+    background: rgba(32, 33, 36, 0.45);
+  }
+
+  .preview-dialog {
+    position: relative;
+    width: min(920px, 96vw);
+    max-height: 92vh;
+    overflow: auto;
+    border-radius: 8px;
+    background: #ffffff;
+    padding: 42px 14px 14px;
+    border: 1px solid var(--line);
+  }
+
+  .preview-close {
+    position: absolute;
+    top: 8px;
+    right: 8px;
+    width: 32px;
+    min-height: 32px;
+    padding: 0;
+    font-size: 22px;
+    line-height: 1;
+  }
+
+  .preview-image-wrap svg {
+    display: block;
+    width: 100%;
+    height: auto;
+    background: #fffdf8;
+  }
+
+  #board {
+    display: block;
+    width: 100%;
+    height: auto;
+    background: #fffdf8;
+    border-radius: 6px;
+  }
+
+  .note-input {
+    width: 100%;
+    height: 100%;
+    border: 1px solid transparent;
+    border-radius: 4px;
+    background: transparent;
+    color: #202124;
+    font: 24px "Yu Gothic", "Meiryo", system-ui, sans-serif;
+    padding: 0 4px;
+    resize: none;
+    outline: none;
+    overflow: hidden;
+  }
+
+  .note-input:focus {
+    border-color: #d8d5cd;
+    background: rgba(255, 255, 255, 0.65);
+  }
+
+  .question-input {
+    width: 100%;
+    height: 100%;
+    border: 1px solid transparent;
+    border-radius: 4px;
+    background: transparent;
+    color: #202124;
+    font: 600 34px "Yu Gothic", "Meiryo", system-ui, sans-serif;
+    padding: 0 4px;
+    outline: none;
+  }
+
+  .question-input:focus {
+    border-color: #d8d5cd;
+    background: rgba(255, 255, 255, 0.65);
+  }
+
+  .question-input::placeholder {
+    color: rgba(32, 33, 36, 0.26);
+  }
+
+  .seat,
+  .table-shape,
+  .svg-control,
+  .question-text {
+    cursor: pointer;
+  }
+
+  @media (max-width: 860px) {
+    #app {
+      padding: 12px;
+    }
+
+    .area-picker {
+      grid-template-columns: 1fr;
+    }
+
+    .topbar {
+      align-items: stretch;
+      flex-direction: column;
+    }
+  }
+</style>
+
+<script>
+  const sectionDefs = [
+    { id: "4A", kind: "four" },
+    { id: "4B", kind: "four" },
+    { id: "3A", kind: "three" },
+    { id: "3B", kind: "three" }
+  ];
+
+  const progressOptions = {
+    four: ["None", "東1", "東2", "東3", "東4", "南1", "南2", "南3", "南4"],
+    three: ["None", "東1", "東2", "東3", "南1", "南2", "南3"]
+  };
+
+  const seatCycle = ["〇", "TL", "L", "ス"];
+  const defaultQuestion = "";
+  const state = {
+    question: defaultQuestion,
+    note: "",
+    selectedBan: null,
+    sections: sectionDefs.map((def) => ({
+      ...def,
+      selected: true,
+      visible: true,
+      people: 0,
+      tables: []
+    }))
+  };
+
+  let nextTableId = 1;
+  const startScreen = document.getElementById("startScreen");
+  const workScreen = document.getElementById("workScreen");
+  const areaPicker = document.getElementById("areaPicker");
+  const startBtn = document.getElementById("startBtn");
+  const backBtn = document.getElementById("backBtn");
+  const resetBtn = document.getElementById("resetBtn");
+  const previewBtn = document.getElementById("previewBtn");
+  const previewModal = document.getElementById("previewModal");
+  const closePreviewBtn = document.getElementById("closePreviewBtn");
+  const previewImageWrap = document.getElementById("previewImageWrap");
+  const startError = document.getElementById("startError");
+  const board = document.getElementById("board");
+  const downloadBtn = document.getElementById("downloadBtn");
+  const NS = "http://www.w3.org/2000/svg";
+  let suppressNextClick = false;
+
+  function createTable(section) {
+    return {
+      id: nextTableId++,
+      progress: "None",
+      seats: Array(section.kind === "four" ? 4 : 3).fill("〇")
+    };
+  }
+
+  function svgEl(name, attrs = {}, text = "") {
+    const el = document.createElementNS(NS, name);
+    Object.entries(attrs).forEach(([key, value]) => el.setAttribute(key, value));
+    if (text) el.textContent = text;
+    return el;
+  }
+
+  function addClick(el, handler) {
+    el.addEventListener("click", (event) => {
+      event.stopPropagation();
+      handler(event);
+    });
+    return el;
+  }
+
+  function attachTablePress(el, section, table) {
+    let timer = null;
+    let longPressed = false;
+
+    const clearTimer = () => {
+      if (timer) {
+        window.clearTimeout(timer);
+        timer = null;
+      }
+    };
+
+    el.addEventListener("pointerdown", () => {
+      longPressed = false;
+      clearTimer();
+      timer = window.setTimeout(() => {
+        longPressed = true;
+        suppressNextClick = true;
+        const index = section.tables.findIndex((item) => item.id === table.id);
+        if (index !== -1) {
+          section.tables.splice(index, 1);
+          renderBoard();
+        }
+      }, 650);
+    });
+
+    el.addEventListener("pointerup", clearTimer);
+    el.addEventListener("pointerleave", clearTimer);
+    el.addEventListener("pointercancel", clearTimer);
+    el.addEventListener("click", (event) => {
+      event.stopPropagation();
+      if (longPressed || suppressNextClick) {
+        suppressNextClick = false;
+        return;
+      }
+      cycleProgress(section, table);
+    });
+  }
+
+  function renderAreaPicker() {
+    areaPicker.innerHTML = "";
+    state.sections.forEach((section) => {
+      const label = document.createElement("label");
+      label.className = "area-choice";
+      label.innerHTML = `
+        <input type="checkbox" ${section.selected ? "checked" : ""}>
+        <span class="area-name">${section.id}</span>
+        <span class="area-kind">${section.kind === "four" ? "4人卓" : "3人卓"}</span>
+      `;
+      label.querySelector("input").addEventListener("change", (event) => {
+        section.selected = event.target.checked;
+        section.visible = event.target.checked;
+        startError.textContent = "";
+      });
+      areaPicker.append(label);
+    });
+  }
+
+  function renderBoard() {
+    board.innerHTML = "";
+    const visibleSections = state.sections.filter((section) => section.selected && section.visible);
+    const startY = 100;
+    const noteAreaH = 132;
+    const gapBeforeNote = 18;
+    const sectionHeights = visibleSections.map(getSectionHeight);
+    const sectionsHeight = sectionHeights.reduce((total, height) => total + height, 0);
+    const boardHeight = Math.max(1120, startY + sectionsHeight + gapBeforeNote + noteAreaH + 24);
+
+    board.setAttribute("viewBox", `0 0 900 ${boardHeight}`);
+    board.append(svgEl("rect", { x: 0, y: 0, width: 900, height: boardHeight, fill: "#fffdf8" }));
+
+    drawQuestion();
+
+    if (!visibleSections.length) {
+      board.append(svgEl("text", {
+        x: 450,
+        y: 560,
+        "text-anchor": "middle",
+        fill: "#686b70",
+        "font-size": 28,
+        "font-family": "Yu Gothic, Meiryo, sans-serif"
+      }, "表示する領域がありません"));
+      return;
+    }
+
+    let currentY = startY;
+    visibleSections.forEach((section, index) => {
+      drawSection(section, currentY, sectionHeights[index]);
+      currentY += sectionHeights[index];
+    });
+
+    drawNoteArea(currentY + gapBeforeNote, noteAreaH - 18);
+  }
+
+  function getSectionHeight(section) {
+    if (!section.tables.length) return 210;
+    const rows = Math.ceil(section.tables.length / 3);
+    return 230 + Math.max(0, rows - 1) * 150;
+  }
+
+  function drawQuestion() {
+    board.append(svgEl("text", {
+      x: 42,
+      y: 64,
+      fill: "#202124",
+      "font-size": 34,
+      "font-family": "Yu Gothic, Meiryo, sans-serif",
+      "font-weight": 600
+    }, "Q."));
+
+    const foreign = svgEl("foreignObject", {
+      x: 82,
+      y: 30,
+      width: 415,
+      height: 46,
+      "data-question-editor": "true"
+    });
+    const input = document.createElementNS("http://www.w3.org/1999/xhtml", "input");
+    input.setAttribute("class", "question-input");
+    input.setAttribute("type", "text");
+    input.setAttribute("placeholder", "4Bのお客様へのお伝えは？");
+    input.value = state.question;
+    input.addEventListener("input", (event) => {
+      state.question = event.target.value;
+    });
+    foreign.append(input);
+    board.append(foreign);
+    drawBanOptions();
+  }
+
+  function drawBanOptions() {
+    const startX = 516;
+    const startY = 24;
+    const buttonW = 46;
+    const buttonH = 30;
+
+    for (let number = 3; number <= 10; number += 1) {
+      const index = number - 3;
+      const x = startX + index * buttonW;
+      const y = startY;
+      const selected = state.selectedBan === number;
+      const group = svgEl("g", {
+        class: "svg-control",
+        role: "button",
+        "aria-label": `${number}人番`
+      });
+      addClick(group, () => {
+        state.selectedBan = number;
+        renderBoard();
+      });
+      group.append(svgEl("rect", {
+        x,
+        y,
+        width: buttonW - 4,
+        height: buttonH,
+        rx: 6,
+        fill: selected ? "#246b60" : "#ffffff",
+        stroke: selected ? "#246b60" : "#d8d5cd",
+        "stroke-width": 2
+      }));
+      group.append(svgEl("text", {
+        x: x + (buttonW - 4) / 2,
+        y: y + 21,
+        "text-anchor": "middle",
+        fill: selected ? "#ffffff" : "#202124",
+        "font-size": 14,
+        "font-family": "Yu Gothic, Meiryo, sans-serif",
+        "font-weight": 600,
+        "pointer-events": "none"
+      }, `${number}人番`));
+      board.append(group);
+    }
+  }
+
+  function drawNoteArea(y, h) {
+    const note = state.note.trim();
+    const group = svgEl("g", { "data-note-area": "true", "data-note-text-y": y + 36 });
+    group.append(svgEl("line", {
+      x1: 28,
+      y1: y,
+      x2: 872,
+      y2: y,
+      stroke: "#d8d5cd",
+      "stroke-width": 2
+    }));
+    group.append(svgEl("text", {
+      x: 46,
+      y: y + 36,
+      fill: "#202124",
+      "font-size": 24,
+      "font-family": "Yu Gothic, Meiryo, sans-serif",
+      "font-weight": 600
+    }, "補足"));
+
+    const foreign = svgEl("foreignObject", {
+      x: 112,
+      y: y + 12,
+      width: 610,
+      height: Math.max(44, h - 18),
+      "data-note-editor": "true"
+    });
+    const input = document.createElementNS("http://www.w3.org/1999/xhtml", "textarea");
+    input.setAttribute("class", "note-input");
+    input.setAttribute("placeholder", "必要なときだけ補足を追加");
+    input.value = state.note;
+    input.addEventListener("input", (event) => {
+      state.note = event.target.value;
+    });
+    foreign.append(input);
+    group.append(foreign);
+
+    board.append(group);
+  }
+
+  function drawSection(section, y, h) {
+    board.append(svgEl("line", {
+      x1: 28,
+      y1: y,
+      x2: 872,
+      y2: y,
+      stroke: "#d8d5cd",
+      "stroke-width": 2
+    }));
+
+    board.append(svgEl("text", {
+      x: 46,
+      y: y + 44,
+      fill: "#202124",
+      "font-size": 31,
+      "font-family": "Yu Gothic, Meiryo, sans-serif",
+      "font-weight": 600
+    }, section.id));
+
+    drawAddButton(section, 742, y + 18);
+
+    if (!section.tables.length) {
+      return;
+    }
+
+    const layout = getTableLayout(section.tables.length, y, h);
+    section.tables.forEach((table, index) => {
+      const pos = layout.positions[index];
+      drawTable(section, table, index, pos.x, pos.y, layout.size);
+    });
+
+    const rightmostIndex = layout.positions.reduce((bestIndex, pos, index) => {
+      return pos.x >= layout.positions[bestIndex].x ? index : bestIndex;
+    }, 0);
+    const controlPos = layout.positions[rightmostIndex];
+    drawPeopleControls(section, controlPos.x + layout.size + 62, controlPos.y - 20);
+    if (section.people > 0) {
+      board.append(svgEl("text", {
+        x: controlPos.x + layout.size + 62,
+        y: controlPos.y + 52,
+        fill: "#202124",
+        "font-size": 22,
+        "font-family": "Yu Gothic, Meiryo, sans-serif",
+        "font-weight": 600
+      }, `${section.people}人`));
+    }
+  }
+
+  function drawAddButton(section, x, y) {
+    const group = svgEl("g", {
+      class: "svg-control",
+      "data-ui-control": "true",
+      role: "button",
+      "aria-label": `${section.id} 卓追加`
+    });
+    addClick(group, () => {
+      section.tables.push(createTable(section));
+      renderBoard();
+    });
+    group.append(svgEl("rect", {
+      x,
+      y,
+      width: 104,
+      height: 36,
+      rx: 6,
+      fill: "#246b60",
+      stroke: "#246b60"
+    }));
+    group.append(svgEl("text", {
+      x: x + 52,
+      y: y + 24,
+      "text-anchor": "middle",
+      fill: "#ffffff",
+      "font-size": 17,
+      "font-family": "Yu Gothic, Meiryo, sans-serif",
+      "font-weight": 600,
+      "pointer-events": "none"
+    }, "卓追加"));
+    board.append(group);
+  }
+
+  function getTableLayout(count, y, h) {
+    const cols = Math.min(3, count);
+    const rows = Math.ceil(count / 3);
+    const left = 170;
+    const right = 690;
+    const top = y + 82;
+    const bottom = y + h - 44;
+    const cellW = (right - left) / cols;
+    const cellH = Math.max(96, (bottom - top) / rows);
+    const size = Math.max(34, Math.min(72, cellW * 0.18, cellH * 0.22));
+    const positions = [];
+
+    for (let i = 0; i < count; i += 1) {
+      const col = i % 3;
+      const row = Math.floor(i / 3);
+      const actualCols = row === rows - 1 ? count - row * 3 : cols;
+      const rowLeft = left + ((cols - actualCols) * cellW) / 2;
+      positions.push({
+        x: rowLeft + cellW * col + cellW / 2,
+        y: top + cellH * row + cellH / 2
+      });
+    }
+
+    return { positions, size };
+  }
+
+  function drawTable(section, table, tableIndex, cx, cy, size) {
+    const group = svgEl("g", {
+      class: "table-shape",
+      role: "button",
+      "aria-label": `${section.id} 卓${tableIndex + 1} 進行状況変更`
+    });
+    attachTablePress(group, section, table);
+
+    if (section.kind === "four") {
+      const points = [
+        [cx, cy - size],
+        [cx + size, cy],
+        [cx, cy + size],
+        [cx - size, cy]
+      ];
+      group.append(svgEl("polygon", {
+        points: points.map((p) => p.join(",")).join(" "),
+        fill: "#f3e6c5",
+        stroke: "#202124",
+        "stroke-width": 4
+      }));
+      board.append(group);
+      drawSeat(section, table, 0, cx + size / 2 + 22, cy - size / 2 - 22);
+      drawSeat(section, table, 1, cx + size / 2 + 22, cy + size / 2 + 22);
+      drawSeat(section, table, 2, cx - size / 2 - 22, cy + size / 2 + 22);
+      drawSeat(section, table, 3, cx - size / 2 - 22, cy - size / 2 - 22);
+    } else {
+      const height = size * 1.8;
+      const points = [
+        [cx, cy - height / 2],
+        [cx + size, cy + height / 2],
+        [cx - size, cy + height / 2]
+      ];
+      group.append(svgEl("polygon", {
+        points: points.map((p) => p.join(",")).join(" "),
+        fill: "#dcebe5",
+        stroke: "#202124",
+        "stroke-width": 4
+      }));
+      board.append(group);
+      drawSeat(section, table, 0, cx + size / 2 + 22, cy - 8);
+      drawSeat(section, table, 1, cx, cy + height / 2 + 28);
+      drawSeat(section, table, 2, cx - size / 2 - 22, cy - 8);
+    }
+
+    if (table.progress !== "None") {
+      board.append(svgEl("text", {
+        x: cx,
+        y: cy + 9,
+        "text-anchor": "middle",
+        fill: "#202124",
+        "font-size": Math.max(20, size * 0.38),
+        "font-family": "Yu Gothic, Meiryo, sans-serif",
+        "font-weight": 600,
+        "pointer-events": "none"
+      }, table.progress));
+    }
+
+    board.append(svgEl("text", {
+      x: cx,
+      y: cy + size + 56,
+      "text-anchor": "middle",
+      fill: "#686b70",
+      "font-size": 17,
+      "font-family": "Yu Gothic, Meiryo, sans-serif"
+    }, `卓${tableIndex + 1}`));
+
+  }
+
+  function drawPeopleControls(section, x, y) {
+    const group = svgEl("g", {
+      class: "svg-control",
+      "data-ui-control": "true",
+      "aria-label": "人数設定"
+    });
+
+    group.append(svgEl("text", {
+      x,
+      y: y + 15,
+      fill: "#202124",
+      "font-size": 15,
+      "font-family": "Yu Gothic, Meiryo, sans-serif"
+    }, "人数"));
+
+    const minus = drawTinyButton(x, y + 26, "-", () => {
+      section.people = Math.max(0, section.people - 1);
+      renderBoard();
+    });
+    const plus = drawTinyButton(x + 60, y + 26, "+", () => {
+      section.people += 1;
+      renderBoard();
+    });
+
+    group.append(minus);
+    group.append(svgEl("text", {
+      x: x + 48,
+      y: y + 45,
+      "text-anchor": "middle",
+      fill: "#202124",
+      "font-size": 17,
+      "font-family": "Yu Gothic, Meiryo, sans-serif",
+      "font-weight": 600
+    }, String(section.people)));
+    group.append(plus);
+    board.append(group);
+  }
+
+  function drawTinyButton(x, y, label, handler) {
+    const group = svgEl("g", { class: "svg-control", role: "button" });
+    addClick(group, handler);
+    group.append(svgEl("rect", {
+      x,
+      y,
+      width: 28,
+      height: 24,
+      rx: 5,
+      fill: "#ffffff",
+      stroke: "#d8d5cd"
+    }));
+    group.append(svgEl("text", {
+      x: x + 14,
+      y: y + 17,
+      "text-anchor": "middle",
+      fill: "#202124",
+      "font-size": 18,
+      "font-family": "Yu Gothic, Meiryo, sans-serif",
+      "font-weight": 600,
+      "pointer-events": "none"
+    }, label));
+    return group;
+  }
+
+  function cycleProgress(section, table) {
+    const options = progressOptions[section.kind];
+    const currentIndex = options.indexOf(table.progress);
+    table.progress = options[(currentIndex + 1) % options.length];
+    renderBoard();
+  }
+
+  function drawSeat(section, table, seatIndex, cx, cy) {
+    const group = svgEl("g", {
+      class: "seat",
+      role: "button",
+      "aria-label": `${section.id} 席${seatIndex + 1}`
+    });
+    addClick(group, () => {
+      const current = table.seats[seatIndex];
+      table.seats[seatIndex] = seatCycle[(seatCycle.indexOf(current) + 1) % seatCycle.length];
+      renderBoard();
+    });
+    group.append(svgEl("circle", {
+      cx,
+      cy,
+      r: 25,
+      fill: "transparent",
+      stroke: "none"
+    }));
+    group.append(svgEl("text", {
+      x: cx,
+      y: cy + 9,
+      "text-anchor": "middle",
+      fill: "#202124",
+      "font-size": table.seats[seatIndex] === "〇" ? 25 : 21,
+      "font-family": "Yu Gothic, Meiryo, sans-serif",
+      "font-weight": 600,
+      "pointer-events": "none"
+    }, table.seats[seatIndex]));
+    board.append(group);
+  }
+
+  function buildExportSvg() {
+    const clone = board.cloneNode(true);
+    clone.querySelectorAll("[data-question-editor='true']").forEach((el) => el.remove());
+    if (state.question.trim()) {
+      clone.append(svgEl("text", {
+        x: 82,
+        y: 64,
+        fill: "#202124",
+        "font-size": 34,
+        "font-family": "Yu Gothic, Meiryo, sans-serif",
+        "font-weight": 600
+      }, state.question.trim()));
+    }
+    const clonedNoteArea = clone.querySelector("[data-note-area='true']");
+    if (clonedNoteArea && state.note.trim()) {
+      clonedNoteArea.querySelectorAll("[data-note-editor='true']").forEach((el) => el.remove());
+      const noteText = svgEl("text", {
+        x: 116,
+        y: clonedNoteArea.getAttribute("data-note-text-y") || 1002,
+        fill: "#202124",
+        "font-size": 24,
+        "font-family": "Yu Gothic, Meiryo, sans-serif"
+      }, state.note.trim());
+      clonedNoteArea.append(noteText);
+    }
+    clone.querySelectorAll("[data-ui-control='true']").forEach((el) => el.remove());
+    if (!state.note.trim()) {
+      clone.querySelectorAll("[data-note-area='true']").forEach((el) => el.remove());
+    }
+    clone.setAttribute("xmlns", NS);
+    return clone;
+  }
+
+  function downloadPng() {
+    const clone = buildExportSvg();
+    const data = new XMLSerializer().serializeToString(clone);
+    const svgBlob = new Blob([data], { type: "image/svg+xml;charset=utf-8" });
+    const url = URL.createObjectURL(svgBlob);
+    const img = new Image();
+    img.onload = () => {
+      const viewBox = board.getAttribute("viewBox").split(" ").map(Number);
+      const exportHeight = viewBox[3] || 1120;
+      const canvas = document.createElement("canvas");
+      canvas.width = 1800;
+      canvas.height = exportHeight * 2;
+      const ctx = canvas.getContext("2d");
+      ctx.fillStyle = "#fffdf8";
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
+      ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+      URL.revokeObjectURL(url);
+      const a = document.createElement("a");
+      a.href = canvas.toDataURL("image/png");
+      a.download = "janso-table-info.png";
+      a.click();
+    };
+    img.src = url;
+  }
+
+  function showPreview() {
+    const clone = buildExportSvg();
+    previewImageWrap.innerHTML = "";
+    previewImageWrap.append(clone);
+    previewModal.classList.remove("is-hidden");
+  }
+
+  function hidePreview() {
+    previewModal.classList.add("is-hidden");
+    previewImageWrap.innerHTML = "";
+  }
+
+  function showStartScreen() {
+    startScreen.classList.remove("is-hidden");
+    workScreen.classList.add("is-hidden");
+    downloadBtn.classList.add("is-hidden");
+    previewBtn.classList.add("is-hidden");
+    backBtn.classList.add("is-hidden");
+    renderAreaPicker();
+  }
+
+  function resetAll() {
+    nextTableId = 1;
+    state.question = defaultQuestion;
+    state.note = "";
+    state.selectedBan = null;
+    state.sections.forEach((section) => {
+      section.selected = true;
+      section.visible = true;
+      section.people = 0;
+      section.tables = [];
+    });
+    showStartScreen();
+  }
+
+  function showWorkScreen() {
+    const selectedCount = state.sections.filter((section) => section.selected).length;
+    if (!selectedCount) {
+      startError.textContent = "少なくとも1つ選択してください。";
+      return;
+    }
+    state.sections.forEach((section) => {
+      section.visible = section.selected;
+    });
+    startScreen.classList.add("is-hidden");
+    workScreen.classList.remove("is-hidden");
+    downloadBtn.classList.remove("is-hidden");
+    previewBtn.classList.remove("is-hidden");
+    backBtn.classList.remove("is-hidden");
+    renderBoard();
+  }
+
+  startBtn.addEventListener("click", showWorkScreen);
+  backBtn.addEventListener("click", showStartScreen);
+  resetBtn.addEventListener("click", resetAll);
+  downloadBtn.addEventListener("click", downloadPng);
+  previewBtn.addEventListener("click", showPreview);
+  closePreviewBtn.addEventListener("click", hidePreview);
+
+  showStartScreen();
+</script>
+</body>
+</html>
