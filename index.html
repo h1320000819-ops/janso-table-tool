@@ -20,7 +20,6 @@
     </div>
   </header>
 
-  
   <main id="startScreen" class="start-screen">
     <section class="start-card" aria-label="領域選択">
       <p class="eyebrow">最初に使う領域を選択</p>
@@ -252,6 +251,19 @@
     background: #fffdf8;
   }
 
+  .preview-image-wrap img {
+    display: block;
+    width: 100%;
+    height: auto;
+    background: #fffdf8;
+  }
+
+  .mobile-save-hint {
+    margin: 0 0 10px;
+    color: var(--muted);
+    font-size: 14px;
+  }
+
   #board {
     display: block;
     width: 100%;
@@ -308,8 +320,13 @@
   }
 
   @media (max-width: 860px) {
+    body {
+      overflow-x: auto;
+    }
+
     #app {
-      padding: 12px;
+      min-width: 960px;
+      padding: 14px;
     }
 
     .area-picker {
@@ -317,8 +334,34 @@
     }
 
     .topbar {
-      align-items: stretch;
-      flex-direction: column;
+      width: 932px;
+      max-width: none;
+      align-items: center;
+      flex-direction: row;
+    }
+
+    .work-screen {
+      width: 932px;
+      max-width: none;
+    }
+
+    .preview-wrap {
+      width: 932px;
+    }
+
+    .start-screen {
+      width: 720px;
+      max-width: none;
+    }
+
+    button {
+      min-height: 44px;
+      font-size: 18px;
+    }
+
+    .preview-dialog {
+      width: 94vw;
+      padding-top: 48px;
     }
   }
 </style>
@@ -931,12 +974,49 @@
       ctx.fillRect(0, 0, canvas.width, canvas.height);
       ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
       URL.revokeObjectURL(url);
-      const a = document.createElement("a");
-      a.href = canvas.toDataURL("image/png");
-      a.download = "janso-table-info.png";
-      a.click();
+      canvas.toBlob(async (blob) => {
+        if (!blob) return;
+        const file = new File([blob], "janso-table-info.png", { type: "image/png" });
+        if (navigator.canShare && navigator.canShare({ files: [file] })) {
+          try {
+            await navigator.share({
+              files: [file],
+              title: "卓情報画像"
+            });
+            return;
+          } catch (error) {
+            if (error && error.name === "AbortError") return;
+          }
+        }
+        const pngUrl = URL.createObjectURL(blob);
+        const a = document.createElement("a");
+        a.href = pngUrl;
+        a.download = "janso-table-info.png";
+        a.click();
+        if (isMobileDevice()) {
+          showImageSavePreview(pngUrl);
+        } else {
+          window.setTimeout(() => URL.revokeObjectURL(pngUrl), 2000);
+        }
+      }, "image/png");
     };
     img.src = url;
+  }
+
+  function isMobileDevice() {
+    return /Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
+  }
+
+  function showImageSavePreview(url) {
+    previewImageWrap.innerHTML = "";
+    const hint = document.createElement("p");
+    hint.className = "mobile-save-hint";
+    hint.textContent = "画像を長押しして保存できます。";
+    const img = document.createElement("img");
+    img.src = url;
+    img.alt = "保存用画像";
+    previewImageWrap.append(hint, img);
+    previewModal.classList.remove("is-hidden");
   }
 
   function showPreview() {
@@ -947,6 +1027,9 @@
   }
 
   function hidePreview() {
+    previewImageWrap.querySelectorAll("img").forEach((img) => {
+      if (img.src.startsWith("blob:")) URL.revokeObjectURL(img.src);
+    });
     previewModal.classList.add("is-hidden");
     previewImageWrap.innerHTML = "";
   }
